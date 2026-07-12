@@ -187,9 +187,10 @@ footer a{color:var(--dim)}
         <div class="setting" id="modelSetting">
           <label>Model (browser)</label>
           <div class="chips" id="modelChips">
-            <div class="chip" data-v="onnx-community/whisper-tiny">Tiny<small>fastest · ~40 MB</small></div>
-            <div class="chip sel" data-v="onnx-community/whisper-base">Base<small>balanced · ~80 MB</small></div>
-            <div class="chip" data-v="onnx-community/whisper-small">Small<small>best · ~250 MB</small></div>
+            <div class="chip" data-v="onnx-community/whisper-tiny_timestamped">Tiny<small>fastest · ~40 MB</small></div>
+            <div class="chip sel" data-v="onnx-community/whisper-base_timestamped">Base<small>balanced · ~80 MB</small></div>
+            <div class="chip" data-v="onnx-community/whisper-small_timestamped">Small<small>better · ~250 MB</small></div>
+            <div class="chip" data-v="onnx-community/whisper-large-v3-turbo_timestamped">Turbo<small>best · ~1 GB · good GPU</small></div>
           </div>
         </div>
       </div>
@@ -267,7 +268,7 @@ footer a{color:var(--dim)}
 const LIB="https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0/dist/transformers.min.js";
 const SR=16000, WIN=30, HOP=28;
 const $=id=>document.getElementById(id);
-const settings={language:"hinglish",engine:"browser",model:"onnx-community/whisper-base"};
+const settings={language:"hinglish",engine:"browser",model:"onnx-community/whisper-base_timestamped"};
 let caps=[], file=null, fileKey=null, activeIdx=-1, follow=true, dirty=false, saveTimer=null;
 let worker=null, workerReady=false, cancelled=false;
 let serverJob=null, serverBase="";
