@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caption Wala — free YouTube captions in your browser</title>
+<meta name="description" content="Create YouTube-ready SRT captions for any video — English & Hinglish. Runs entirely in your browser: your video is never uploaded.">
+<style>
+:root{
+  --bg:#0d0f14; --panel:#151824; --panel2:#1b1f2e; --line:#262b3d;
+  --text:#e8eaf2; --dim:#8b91a7; --faint:#5a6078;
+  --accent:#ff7847; --accent2:#ffb347; --grad:linear-gradient(135deg,#ff7847,#ffb347);
+  --green:#4ade80; --red:#f87171; --blue:#60a5fa;
+  --radius:14px; --mono:"SF Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;min-height:100vh}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(900px 400px at 80% -10%,rgba(255,120,71,.10),transparent),
+             radial-gradient(700px 400px at 10% 110%,rgba(255,179,71,.06),transparent)}
+#app{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:28px 24px 60px}
+header{display:flex;align-items:center;gap:14px;margin-bottom:26px}
+.logo{width:44px;height:44px;border-radius:12px;background:var(--grad);
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+  box-shadow:0 4px 24px rgba(255,120,71,.35)}
+h1{font-size:22px;font-weight:700;letter-spacing:-.02em}
+h1 span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--dim);font-size:13px}
+.hbtn{margin-left:auto;background:var(--panel2);border:1px solid var(--line);color:var(--dim);
+  padding:8px 16px;border-radius:10px;cursor:pointer;font-size:13px;transition:.15s}
+.hbtn:hover{color:var(--text);border-color:var(--faint)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px}
+.hidden{display:none!important}
+#drop{border:2px dashed var(--line);border-radius:var(--radius);padding:48px 24px;
+  text-align:center;cursor:pointer;transition:.2s;background:var(--panel)}
+#drop:hover,#drop.over{border-color:var(--accent);background:rgba(255,120,71,.05)}
+#drop .big{font-size:44px;margin-bottom:12px}
+#drop h2{font-size:19px;margin-bottom:6px}
+#drop p{color:var(--dim);font-size:13px}
+.privacy{display:inline-flex;align-items:center;gap:7px;margin-top:14px;background:rgba(74,222,128,.08);
+  border:1px solid rgba(74,222,128,.25);color:var(--green);font-size:12px;padding:6px 14px;border-radius:20px}
+.eq{display:inline-flex;gap:3px;align-items:flex-end;height:34px;margin-bottom:10px}
+.eq i{width:5px;border-radius:3px;background:var(--grad);animation:eq 1.1s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:.15s}.eq i:nth-child(3){animation-delay:.3s}
+.eq i:nth-child(4){animation-delay:.45s}.eq i:nth-child(5){animation-delay:.6s}
+@keyframes eq{0%,100%{height:8px}50%{height:32px}}
+.settings{display:flex;gap:28px;flex-wrap:wrap;margin-top:18px}
+.setting label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--faint);margin-bottom:8px;font-weight:600}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:8px 15px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);
+  color:var(--dim);cursor:pointer;font-size:13px;transition:.15s;user-select:none}
+.chip:hover{border-color:var(--faint);color:var(--text)}
+.chip.sel{background:var(--grad);color:#1a1005;border-color:transparent;font-weight:600}
+.chip small{display:block;font-size:10px;opacity:.75}
+#serverRow{margin-top:14px}
+#serverRow input{background:var(--panel2);border:1px solid var(--line);color:var(--text);
+  padding:10px 14px;border-radius:10px;font-size:13px;width:min(420px,100%);outline:none;font-family:var(--mono)}
+#serverRow input:focus{border-color:var(--accent)}
+.hint{color:var(--faint);font-size:12px;margin-top:10px}
+.gpubadge{font-size:11px;color:var(--dim);margin-top:14px}
+.gpubadge b{color:var(--green)}
+#progress .stage{font-size:17px;font-weight:600;margin-bottom:4px}
+#progress .fname{color:var(--dim);font-size:13px;margin-bottom:22px}
+.barwrap{height:10px;background:var(--panel2);border-radius:6px;overflow:hidden;margin-bottom:10px}
+.bar{height:100%;width:0%;background:var(--grad);border-radius:6px;transition:width .6s ease}
+.bar.indet{width:35%!important;animation:slide 1.4s ease-in-out infinite}
+@keyframes slide{0%{margin-left:-35%}100%{margin-left:100%}}
+.pstats{display:flex;justify-content:space-between;color:var(--dim);font-size:13px;margin-bottom:24px;flex-wrap:wrap;gap:8px}
+.pstats b{color:var(--text);font-variant-numeric:tabular-nums}
+#preview{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:18px;
+  min-height:88px;font-size:15px;color:var(--dim);font-style:italic;position:relative;overflow:hidden}
+#preview::before{content:"LIVE TRANSCRIPT";position:absolute;top:10px;right:14px;font-size:9px;
+  letter-spacing:.12em;color:var(--accent);font-style:normal;font-weight:700}
+#preview .ptext{margin-top:14px;color:var(--text);font-style:normal;animation:fadein .5s}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+#editor{display:grid;grid-template-columns:minmax(420px,46%) 1fr;gap:20px;align-items:start}
+@media(max-width:960px){#editor{grid-template-columns:1fr}}
+.vpanel{position:sticky;top:20px}
+video{width:100%;border-radius:var(--radius);background:#000;border:1px solid var(--line)}
+.novideo{border:1px dashed var(--line);border-radius:var(--radius);padding:30px;text-align:center;
+  color:var(--faint);font-size:13px;cursor:pointer}
+.novideo:hover{border-color:var(--accent);color:var(--dim)}
+.nowcap{margin-top:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:14px 18px;text-align:center;min-height:64px;display:flex;align-items:center;justify-content:center;
+  font-size:16px;line-height:1.45;white-space:pre-line}
+.nowcap.empty{color:var(--faint);font-style:italic;font-size:13px}
+.vctrl{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.btn{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:9px 15px;
+  border-radius:10px;cursor:pointer;font-size:13px;transition:.15s;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--grad);color:#1a1005;border-color:transparent;font-weight:600}
+.btn.primary:hover{opacity:.9;color:#1a1005}
+.exports{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.sectitle{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);
+  font-weight:700;margin-bottom:12px}
+.exports .btns{display:flex;gap:8px;flex-wrap:wrap}
+.savestate{margin-top:10px;font-size:12px;color:var(--faint);min-height:16px}
+.savestate.saved{color:var(--green)}
+.cpanel{min-width:0}
+.ctools{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.ctools input[type=text]{background:var(--panel2);border:1px solid var(--line);color:var(--text);
+  padding:9px 12px;border-radius:10px;font-size:13px;flex:1;min-width:110px;outline:none}
+.ctools input[type=text]:focus{border-color:var(--accent)}
+#caplist{max-height:calc(100vh - 190px);overflow-y:auto;padding-right:6px;scroll-behavior:smooth}
+#caplist::-webkit-scrollbar{width:8px}
+#caplist::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+.cap{display:flex;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:12px 14px;margin-bottom:8px;transition:border-color .15s;cursor:pointer}
+.cap textarea,.cap .tstamp{cursor:text}
+.cap.active{border-color:var(--accent);background:rgba(255,120,71,.06)}
+.cap.editing{border-color:var(--accent2);background:rgba(255,179,71,.07)}
+.cap.editing textarea{background:var(--panel2);border-radius:8px;padding:8px 10px}
+.cap .idx{color:var(--faint);font-size:11px;font-family:var(--mono);padding-top:4px;width:32px;flex-shrink:0;text-align:right}
+.cap .mid{flex:1;min-width:0}
+.cap .times{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.cap .tstamp{font-family:var(--mono);font-size:11.5px;color:var(--dim);background:var(--panel2);
+  border:1px solid var(--line);border-radius:6px;padding:3px 7px;transition:.15s}
+.cap .tstamp:hover{color:var(--accent);border-color:var(--accent)}
+.cap .tstamp[contenteditable=true]:focus{outline:1px solid var(--accent);color:var(--text)}
+.cap .arrow{color:var(--faint);font-size:11px}
+.cap .nudge{background:none;border:none;color:var(--faint);cursor:pointer;font-size:11px;padding:2px 3px;font-family:var(--mono)}
+.cap .nudge:hover{color:var(--accent)}
+.cap textarea{width:100%;background:transparent;border:none;color:var(--text);resize:none;
+  font-family:inherit;font-size:15px;line-height:1.45;outline:none;overflow:hidden;
+  padding:2px 0;min-height:24px;display:block}
+.cap textarea:focus{color:#fff}
+.cap .warn{font-size:10.5px;color:var(--accent2);margin-top:2px}
+.cap .ops{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.cap .ops button{background:none;border:none;color:var(--faint);cursor:pointer;font-size:13px;
+  padding:3px 6px;border-radius:6px;transition:.15s}
+.cap .ops button:hover{color:var(--text);background:var(--panel2)}
+.cap .ops .del:hover{color:var(--red)}
+.count{color:var(--faint);font-size:12px;margin-left:auto;white-space:nowrap}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:12px 22px;
+  border-radius:12px;font-size:14px;transition:.3s;z-index:99;box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:90vw}
+.toast.show{transform:translateX(-50%) translateY(0)}
+kbd{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;
+  font-family:var(--mono);font-size:11px;color:var(--dim)}
+footer{margin-top:40px;text-align:center;color:var(--faint);font-size:12px}
+footer a{color:var(--dim)}
+.err{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);color:var(--red);
+  border-radius:12px;padding:14px 18px;font-size:13px;margin-top:16px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">🎙</div>
+    <div>
+      <h1>Caption <span>Wala</span></h1>
+      <div class="sub">Free YouTube-ready captions · English & Hinglish · runs in your browser</div>
+    </div>
+    <button class="hbtn hidden" id="backBtn">← New video</button>
+  </header>
+
+  <!-- HOME -->
+  <div id="home">
+    <div id="drop">
+      <input type="file" id="fileInput" accept="video/*,audio/*" style="display:none">
+      <div class="eq"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="big">📼</div>
+      <h2>Drop your video or audio here</h2>
+      <p>mp4, mov, m4a, mp3, wav… long-form podcasts welcome</p>
+      <div class="privacy">🔒 Your file never leaves this device — transcription runs locally in your browser</div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="settings">
+        <div class="setting">
+          <label>Language mode</label>
+          <div class="chips" id="langChips">
+            <div class="chip sel" data-v="hinglish">Hinglish<small>Hindi in Roman script</small></div>
+            <div class="chip" data-v="english">English<small>pure English audio</small></div>
+            <div class="chip" data-v="devanagari">हिन्दी<small>Devanagari script</small></div>
+          </div>
+        </div>
+        <div class="setting">
+          <label>Engine</label>
+          <div class="chips" id="engineChips">
+            <div class="chip sel" data-v="browser">This browser<small>private · free</small></div>
+            <div class="chip" data-v="server">Caption Studio server<small>faster, bigger models</small></div>
+          </div>
+        </div>
+        <div class="setting" id="modelSetting">
+          <label>Model (browser)</label>
+          <div class="chips" id="modelChips">
+            <div class="chip" data-v="onnx-community/whisper-tiny">Tiny<small>fastest · ~40 MB</small></div>
+            <div class="chip sel" data-v="onnx-community/whisper-base">Base<small>balanced · ~80 MB</small></div>
+            <div class="chip" data-v="onnx-community/whisper-small">Small<small>best · ~250 MB</small></div>
+          </div>
+        </div>
+      </div>
+      <div id="serverRow" class="hidden">
+        <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin-bottom:8px;font-weight:600">Server URL</label>
+        <input type="text" id="serverUrl" placeholder="https://your-tunnel-url.trycloudflare.com" spellcheck="false">
+        <div class="hint">Point this at a running <code>caption_studio.py</code> (local network or tunnel). Your video uploads to that machine only.</div>
+      </div>
+      <div class="gpubadge" id="gpubadge"></div>
+      <div class="hint">First transcription downloads the model once (then it's cached). A 40-min episode ≈ 5–15 min on Base with GPU acceleration. Tip: audio files (m4a/mp3) process most reliably for very long episodes.</div>
+    </div>
+
+    <div id="homeErr"></div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div id="progress" class="card hidden">
+    <div class="stage" id="pstage">Preparing…</div>
+    <div class="fname" id="pfname"></div>
+    <div class="barwrap"><div class="bar" id="pbar"></div></div>
+    <div class="pstats">
+      <span>Progress <b id="ppct">0%</b></span>
+      <span>Audio processed <b id="ptime">0:00</b> / <b id="ptotal">–</b></span>
+      <span>Elapsed <b id="pelapsed">0:00</b></span>
+      <span>ETA <b id="peta">–</b></span>
+    </div>
+    <div id="preview"><div class="ptext">Waiting for the first words…</div></div>
+    <div class="hint" style="margin-top:14px">Keep this tab open while it works. Everything happens on this device.</div>
+    <div id="progErr"></div>
+  </div>
+
+  <!-- EDITOR -->
+  <div id="editor" class="hidden">
+    <div class="vpanel">
+      <video id="video" controls preload="metadata" class="hidden"></video>
+      <div class="novideo hidden" id="novideo">No video preview — click to re-select the original file</div>
+      <div class="nowcap empty" id="nowcap">captions will appear here as the video plays</div>
+      <div class="vctrl">
+        <button class="btn" data-skip="-5">⏪ 5s</button>
+        <button class="btn" id="playBtn">▶ Play</button>
+        <button class="btn" data-skip="5">5s ⏩</button>
+        <button class="btn" id="followBtn">📍 Follow: on</button>
+        <span class="count" id="rate" style="cursor:pointer">1×</span>
+      </div>
+      <div class="exports">
+        <div class="sectitle">Export</div>
+        <div class="btns">
+          <button class="btn primary" data-x="srt">⬇ SRT for YouTube</button>
+          <button class="btn" data-x="vtt">VTT</button>
+          <button class="btn" data-x="txt">Transcript</button>
+          <button class="btn" data-x="youtube">YT chapters + tags</button>
+        </div>
+        <div class="savestate" id="savestate"></div>
+      </div>
+      <div class="hint"><kbd>Space</kbd> play/pause · <kbd>←</kbd><kbd>→</kbd> skip 5s · click a caption to jump · ✎ to edit</div>
+    </div>
+    <div class="cpanel">
+      <div class="ctools">
+        <input type="text" id="findBox" placeholder="Find…  (fix repeated Hinglish mistakes fast)">
+        <input type="text" id="replBox" placeholder="Replace with…">
+        <button class="btn" id="replBtn">Replace all</button>
+        <span class="count" id="capcount"></span>
+      </div>
+      <div id="caplist"></div>
+    </div>
+  </div>
+
+  <footer>Caption Wala · open source · captions follow YouTube best practice (≤42 chars/line, ≤2 lines, ≤6s) ·
+    powered by <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Whisper via transformers.js</a></footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+"use strict";
+const LIB="https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0/dist/transformers.min.js";
+const SR=16000, WIN=30, HOP=28;
+const $=id=>document.getElementById(id);
+const settings={language:"hinglish",engine:"browser",model:"onnx-community/whisper-base"};
+let caps=[], file=null, fileKey=null, activeIdx=-1, follow=true, dirty=false, saveTimer=null;
+let worker=null, workerReady=false, cancelled=false;
+let serverJob=null, serverBase="";
+
+/* ---------- small utils ---------- */
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function fmtT(s,ms){s=Math.max(0,s||0);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),sec=Math.floor(s%60);
+  let out=(h?h+":":"")+String(m).padStart(h?2:1,"0")+":"+String(sec).padStart(2,"0");
+  if(ms)out+="."+String(Math.round((s%1)*1000)).padStart(3,"0");return out;}
+function hms(s,sep=","){let ms=Math.round(Math.max(0,s)*1000);
+  const h=Math.floor(ms/3600000);ms%=3600000;const m=Math.floor(ms/60000);ms%=60000;
+  const sec=Math.floor(ms/1000);ms%=1000;
+  return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0")+sep+String(ms).padStart(3,"0");}
+let toastT;function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),3000);}
+function show(screen){["home","progress","editor"].forEach(s=>$(s).classList.toggle("hidden",s!==screen));
+  $("backBtn").classList.toggle("hidden",screen==="home");}
+function err(where,msg){$(where).innerHTML=`<div class="err">${esc(msg)}</div>`;}
+
+/* ---------- chips & engine toggle ---------- */
+function chipify(el,key,cb){el.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{
+  el.querySelectorAll(".chip").forEach(x=>x.classList.remove("sel"));
+  c.classList.add("sel");settings[key]=c.dataset.v;if(cb)cb();});}
+chipify($("langChips"),"language");
+chipify($("modelChips"),"model");
+chipify($("engineChips"),"engine",()=>{
+  const srv=settings.engine==="server";
+  $("serverRow").classList.toggle("hidden",!srv);
+  $("modelSetting").classList.toggle("hidden",srv);
+});
+$("serverUrl").value=localStorage.getItem("cw_server")||"";
+if(navigator.gpu){$("gpubadge").innerHTML="⚡ <b>WebGPU detected</b> — transcription will be GPU-accelerated";}
+else{$("gpubadge").textContent="This browser has no WebGPU — transcription will use CPU (slower). Chrome/Edge recommended.";}
+
+/* ---------- caption block building (YouTube rules) ---------- */
+const MAXC=42, MAXL=2, MAXS=6.0, MINS=0.7, PAUSE=0.8;
+const SENTEND=/[.!?।]['"’”]?$/;
+function wrapLines(text){const words=text.split(/\s+/),lines=[];let cur="";
+  for(const w of words){if(cur&&cur.length+1+w.length>MAXC){lines.push(cur);cur=w;}
+    else cur=cur?cur+" "+w:w;}
+  if(cur)lines.push(cur);return lines;}
+function buildBlocks(words){
+  const blocks=[];let cur=[];
+  const flush=()=>{
+    if(!cur.length)return;
+    const text=cur.map(w=>w.word).join(" ").trim();
+    if(!text){cur=[];return;}
+    const lines=wrapLines(text);
+    const chunks=[];for(let i=0;i<lines.length;i+=MAXL)chunks.push(lines.slice(i,i+MAXL));
+    const span=cur[cur.length-1].end-cur[0].start;
+    const total=chunks.flat().reduce((a,l)=>a+l.length,0)||1;
+    let t=cur[0].start;
+    chunks.forEach((ch,ci)=>{
+      const frac=ch.reduce((a,l)=>a+l.length,0)/total;
+      const dur=Math.max(MINS,span*frac);
+      const end=ci===chunks.length-1?cur[cur.length-1].end:Math.min(t+dur,cur[cur.length-1].end);
+      blocks.push({start:+t.toFixed(3),end:+end.toFixed(3),text:ch.join("\n")});
+      t+=dur;});
+    cur=[];};
+  for(const w of words){
+    if(cur.length){
+      const gap=w.start-cur[cur.length-1].end;
+      const span=w.end-cur[0].start;
+      const n=cur.reduce((a,x)=>a+x.word.length+1,0);
+      if(gap>PAUSE||span>MAXS||n>MAXC*MAXL)flush();
+      else if(SENTEND.test(cur[cur.length-1].word)&&n>MAXC)flush();
+    }
+    cur.push(w);}
+  flush();
+  for(let i=0;i<blocks.length;i++){
+    if(blocks[i].end-blocks[i].start<MINS)blocks[i].end=+(blocks[i].start+MINS).toFixed(3);
+    if(i+1<blocks.length&&blocks[i].end>blocks[i+1].start)blocks[i].end=blocks[i+1].start;}
+  return blocks;}
+
+/* ---------- exports ---------- */
+const toSrt=b=>b.map((c,i)=>`${i+1}\n${hms(c.start)} --> ${hms(c.end)}\n${c.text}\n`).join("\n");
+const toVtt=b=>"WEBVTT\n\n"+b.map(c=>`${hms(c.start,".")} --> ${hms(c.end,".")}\n${c.text}\n`).join("\n");
+function toTxt(b){let text=b.map(c=>c.text.replace(/\n/g," ")).join(" ").replace(/\s+/g," ").trim();
+  const sents=text.split(/(?<=[.!?।])\s+/),paras=[];let cur=[];
+  for(const s of sents){cur.push(s);if(cur.join(" ").length>500){paras.push(cur.join(" "));cur=[];}}
+  if(cur.length)paras.push(cur.join(" "));return paras.join("\n\n");}
+const STOP=new Set(`a an the and or but if then than so of to in on at for from by with about into over after under again once here there all any both each few more most other some such no nor not only own same too very can will just should now is are was were be been being have has had do does did i you he she it we they them his her its our your their this that these those what which who whom as up out off down me my gonna wanna like know really actually basically right okay yeah um uh going get got one two also would could thing things lot want way see say said make made even still because when where how why while let us don didn isn wasn aren won hai hain tha thi ho gaya kar karna nahi haan toh aur mein se ka ki ke ko na ye yeh woh bhi kya kuch matlab bahut abhi phir wala log baat`.split(/\s+/));
+function chapterTs(s){s=Math.floor(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),sec=s%60;
+  return h?`${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`:`${m}:${String(sec).padStart(2,"0")}`;}
+function firstWords(b,idx,n=7){const words=[];
+  for(const c of b.slice(idx,idx+3)){words.push(...c.text.replace(/\n/g," ").split(/\s+/));if(words.length>=n)break;}
+  let t=words.slice(0,n).join(" ").replace(/^[ ,.;:\-]+|[ ,.;:\-]+$/g,"");
+  return t?t[0].toUpperCase()+t.slice(1):"Chapter";}
+function ytDetails(b,dur,name){
+  const chapters=[[0,firstWords(b,0)]];
+  for(let i=1;i<b.length&&chapters.length<12;i++){
+    const gap=b[i].start-b[i-1].end;
+    if(gap>=1.5&&b[i].start-chapters[chapters.length-1][0]>=120)chapters.push([b[i].start,firstWords(b,i)]);}
+  const freq={};
+  for(const m of (b.map(c=>c.text).join(" ").toLowerCase().match(/[a-z']+/g)||[]))
+    if(m.length>3&&!STOP.has(m))freq[m]=(freq[m]||0)+1;
+  const tags=Object.entries(freq).sort((a,b2)=>b2[1]-a[1]).slice(0,15).map(e=>e[0]);
+  return [`YOUTUBE UPLOAD HELPER — ${name}`,"=".repeat(60),"",
+    `Duration: ${chapterTs(dur)}   Captions: ${b.length} blocks`,"",
+    "CHAPTERS (paste into description):",
+    ...chapters.map(([t,ti])=>`${chapterTs(t)} ${ti}`),"",
+    "SUGGESTED TAGS:",tags.join(", "),"",
+    "UPLOAD STEPS:",
+    "1. YouTube Studio -> your video -> Subtitles",
+    "2. Language: English -> Add -> Upload file -> With timing",
+    "3. Select the .srt exported from Caption Wala",""].join("\n");}
+function download(text,fname){const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([text],{type:"text/plain;charset=utf-8"}));
+  a.download=fname;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000);}
+
+/* ---------- transcription worker (in-browser engine) ---------- */
+const workerCode=`
+let pipe=null;
+self.onmessage=async e=>{
+  const m=e.data;
+  try{
+    if(m.type==="load"){
+      const {pipeline}=await import(m.lib);
+      pipe=await pipeline("automatic-speech-recognition",m.model,{
+        device:m.device,dtype:m.dtype,
+        progress_callback:p=>self.postMessage({type:"load-progress",
+          status:p.status,file:p.file||"",progress:p.progress||0})});
+      self.postMessage({type:"ready"});
+    }else if(m.type==="transcribe"){
+      const out=await pipe(m.audio,{language:m.language,task:"transcribe",return_timestamps:"word"});
+      self.postMessage({type:"result",id:m.id,chunks:(out.chunks||[]).map(c=>({t:c.text,s:c.timestamp[0],e:c.timestamp[1]}))});
+    }
+  }catch(err){self.postMessage({type:"error",message:String(err&&err.message||err)});}
+};`;
+function makeWorker(){
+  const w=new Worker(URL.createObjectURL(new Blob([workerCode],{type:"text/javascript"})),{type:"module"});
+  return w;}
+
+async function decodeAudio(f,onStage){
+  onStage("Reading file…");
+  const buf=await f.arrayBuffer();
+  onStage("Decoding audio… (large videos can take a minute)");
+  const ac=new (window.AudioContext||window.webkitAudioContext)({sampleRate:SR});
+  let decoded;
+  try{decoded=await ac.decodeAudioData(buf);}
+  finally{ac.close();}
+  // mixdown to mono
+  const ch=decoded.numberOfChannels,len=decoded.length;
+  const mono=new Float32Array(len);
+  for(let c=0;c<ch;c++){const d=decoded.getChannelData(c);
+    for(let i=0;i<len;i++)mono[i]+=d[i]/ch;}
+  // resample if the context didn't honour 16k (Safari)
+  if(decoded.sampleRate!==SR){
+    const ratio=decoded.sampleRate/SR,out=new Float32Array(Math.floor(len/ratio));
+    for(let i=0;i<out.length;i++)out[i]=mono[Math.floor(i*ratio)];
+    return out;}
+  return mono;}
+
+async function transcribeBrowser(f){
+  cancelled=false;
+  const dur0=()=>audio?audio.length/SR:0;
+  let audio=null;
+  const stage=s=>{$("pstage").textContent=s;};
+  const t0=Date.now();
+  const tick=(p,doneS,totS)=>{
+    $("pbar").style.width=(p*100).toFixed(1)+"%";
+    $("ppct").textContent=Math.round(p*100)+"%";
+    $("ptime").textContent=fmtT(doneS);$("ptotal").textContent=fmtT(totS);
+    const el=(Date.now()-t0)/1000;$("pelapsed").textContent=fmtT(el);
+    $("peta").textContent=p>0.02?fmtT(el/p-el):"estimating…";};
+  try{
+    audio=await decodeAudio(f,stage);
+  }catch(e){
+    err("progErr","Could not decode audio from this file in the browser ("+e.message+"). "+
+      "Try an audio export (m4a/mp3) of the episode, a different browser (Chrome works best), or Server mode.");
+    stage("Failed");return;}
+  const totS=audio.length/SR;
+
+  stage("Loading model… (downloads once, then cached)");
+  worker=makeWorker();
+  const webgpu=!!navigator.gpu;
+  const lang=settings.language==="devanagari"?"hi":"en";
+  const loadOpts={type:"load",lib:LIB,model:settings.model,
+    device:webgpu?"webgpu":"wasm",
+    dtype:webgpu?{encoder_model:"fp32",decoder_model_merged:"q4"}:"q8"};
+
+  const words=[];
+  let nextStart=0,id=0,lastText="";
+  const totalChunks=Math.max(1,Math.ceil(Math.max(0,totS-WIN)/HOP)+1);
+
+  await new Promise((resolve,reject)=>{
+    const sendChunk=()=>{
+      if(cancelled)return reject(new Error("Cancelled"));
+      if(nextStart>=totS&&id>0)return resolve();
+      const s=Math.floor(nextStart*SR),e=Math.min(audio.length,s+WIN*SR);
+      const slice=audio.slice(s,e);
+      worker.postMessage({type:"transcribe",id,audio:slice,language:lang},[slice.buffer]);
+    };
+    worker.onmessage=ev=>{
+      const m=ev.data;
+      if(m.type==="load-progress"&&m.status==="progress"){
+        stage(`Downloading model… ${m.file} ${Math.round(m.progress)}%`);
+      }else if(m.type==="ready"){
+        stage("Transcribing on this device…");sendChunk();
+      }else if(m.type==="result"){
+        const off=m.id*HOP;
+        const isFirst=m.id===0,isLast=off+WIN>=totS;
+        const lo=isFirst?0:1,hi=isLast?WIN+1:HOP+1;
+        const seen=[];
+        for(const c of m.chunks){
+          if(c.s==null)continue;
+          const mid=((c.s+(c.e==null?c.s+0.3:c.e))/2);
+          if(mid>=lo&&mid<hi){
+            words.push({word:c.t.trim(),start:+(off+c.s).toFixed(3),
+              end:+(off+(c.e==null?c.s+0.3:c.e)).toFixed(3)});
+            seen.push(c.t.trim());}}
+        if(seen.length){lastText=seen.join(" ");
+          $("preview").innerHTML='<div class="ptext">'+esc(lastText.slice(-300))+"</div>";}
+        const done=Math.min(totS,(m.id+1)*HOP);
+        tick(Math.min(0.99,done/totS),done,totS);
+        id++;nextStart=id*HOP;
+        if(nextStart<totS)sendChunk();else resolve();
+      }else if(m.type==="error"){reject(new Error(m.message));}
+    };
+    worker.onerror=e=>reject(new Error(e.message||"Worker failed"));
+    worker.postMessage(loadOpts);
+  }).then(()=>{
+    worker.terminate();worker=null;
+    words.sort((a,b)=>a.start-b.start);
+    caps=buildBlocks(words);
+    tick(1,totS,totS);
+    saveLocal();
+    toast("Transcription complete 🎉 "+caps.length+" captions");
+    openEditor();
+  }).catch(e=>{
+    if(worker){worker.terminate();worker=null;}
+    if(e.message==="Cancelled")return;
+    err("progErr","Transcription failed: "+e.message+
+      " — try a smaller model, Chrome/Edge, or Server mode.");
+    stage("Failed");
+  });
+}
+
+/* ---------- server engine ---------- */
+async function transcribeServer(f){
+  serverBase=$("serverUrl").value.trim().replace(/\/+$/,"");
+  if(!/^https?:\/\//.test(serverBase)){err("progErr","Enter a server URL first (e.g. your tunnel address).");$("pstage").textContent="No server";return;}
+  localStorage.setItem("cw_server",serverBase);
+  const t0=Date.now();
+  $("pstage").textContent="Uploading to server…";
+  const fd=new FormData();
+  fd.append("file",f);fd.append("model","small");fd.append("language",settings.language);
+  let job;
+  try{
+    job=await new Promise((res,rej)=>{
+      const x=new XMLHttpRequest();x.open("POST",serverBase+"/api/upload");
+      x.upload.onprogress=e=>{if(e.lengthComputable){
+        $("pbar").style.width=(e.loaded/e.total*100).toFixed(1)+"%";
+        $("ppct").textContent=Math.round(e.loaded/e.total*100)+"%";}};
+      x.onload=()=>x.status===200?res(JSON.parse(x.responseText)):rej(new Error("HTTP "+x.status));
+      x.onerror=()=>rej(new Error("Could not reach the server — check the URL and that caption_studio.py is running"));
+      x.send(fd);});
+  }catch(e){err("progErr",e.message);$("pstage").textContent="Failed";return;}
+  serverJob=job;
+  const poll=setInterval(async()=>{
+    let j;try{j=await fetch(`${serverBase}/api/job/${job.id}`).then(r=>r.json());}catch(e){return;}
+    $("pstage").textContent=j.stage||j.status;
+    const p=j.progress||0;
+    $("pbar").style.width=(p*100).toFixed(1)+"%";$("ppct").textContent=Math.round(p*100)+"%";
+    $("ptotal").textContent=j.duration?fmtT(j.duration):"–";
+    $("ptime").textContent=fmtT((j.duration||0)*p);
+    const el=(Date.now()-t0)/1000;$("pelapsed").textContent=fmtT(el);
+    $("peta").textContent=p>0.03?fmtT(el/p-el):"estimating…";
+    if(j.preview)$("preview").innerHTML='<div class="ptext">'+esc(j.preview)+"</div>";
+    if(j.status==="done"){clearInterval(poll);
+      caps=await fetch(`${serverBase}/api/job/${job.id}/captions`).then(r=>r.json());
+      saveLocal();toast("Transcription complete 🎉");openEditor();}
+    if(j.status==="error"){clearInterval(poll);err("progErr","Server error: "+(j.error||"unknown"));}
+  },1200);
+}
+
+/* ---------- upload flow ---------- */
+const drop=$("drop"),fi=$("fileInput");
+drop.onclick=()=>fi.click();
+fi.onchange=()=>{if(fi.files[0])start(fi.files[0]);fi.value="";};
+["dragover","dragenter"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",ev=>{const f=ev.dataTransfer.files[0];if(f)start(f);});
+
+function start(f){
+  file=f;fileKey="cw_"+f.name+"_"+f.size;
+  $("homeErr").innerHTML="";$("progErr").innerHTML="";
+  // resume?
+  const saved=localStorage.getItem(fileKey);
+  if(saved){
+    if(confirm("You have saved captions for this exact file. Open them instead of re-transcribing?")){
+      caps=JSON.parse(saved);openEditor();return;}}
+  show("progress");
+  $("pfname").textContent=f.name+" · "+(f.size/1048576).toFixed(0)+" MB · "+settings.language+
+    (settings.engine==="browser"?" · "+settings.model.split("/")[1]:" · server");
+  $("pbar").style.width="0%";
+  $("preview").innerHTML='<div class="ptext">Waiting for the first words…</div>';
+  if(settings.engine==="browser")transcribeBrowser(f);else transcribeServer(f);
+}
+
+/* ---------- persistence ---------- */
+function saveLocal(){try{if(fileKey)localStorage.setItem(fileKey,JSON.stringify(caps));}catch(e){/* quota */}}
+
+/* ---------- editor (same UX as Caption Studio) ---------- */
+const video=$("video");
+function openEditor(){
+  show("editor");
+  if(file){video.src=URL.createObjectURL(file);video.classList.remove("hidden");$("novideo").classList.add("hidden");}
+  else{video.classList.add("hidden");$("novideo").classList.remove("hidden");}
+  renderCaps();dirty=false;setSave("Saved on this device");}
+$("novideo").onclick=()=>{const inp=document.createElement("input");inp.type="file";inp.accept="video/*,audio/*";
+  inp.onchange=()=>{if(inp.files[0]){file=inp.files[0];video.src=URL.createObjectURL(file);
+    video.classList.remove("hidden");$("novideo").classList.add("hidden");}};inp.click();};
+
+function renderCaps(){
+  const list=$("caplist");list.innerHTML="";
+  const frag=document.createDocumentFragment();
+  caps.forEach((c,i)=>frag.appendChild(capEl(c,i)));
+  list.appendChild(frag);
+  list.querySelectorAll("textarea").forEach(autosize);
+  $("capcount").textContent=caps.length+" captions";activeIdx=-1;}
+
+function capEl(c,i){
+  const d=document.createElement("div");d.className="cap";d.dataset.i=i;
+  const warn=capWarn(c);
+  d.innerHTML=`
+    <div class="idx">${i+1}</div>
+    <div class="mid">
+      <div class="times">
+        <button class="nudge" data-n="start,-0.2" title="start −0.2s">−</button>
+        <span class="tstamp" contenteditable="true" data-f="start" spellcheck="false">${fmtT(c.start,true)}</span>
+        <button class="nudge" data-n="start,0.2" title="start +0.2s">+</button>
+        <span class="arrow">→</span>
+        <button class="nudge" data-n="end,-0.2" title="end −0.2s">−</button>
+        <span class="tstamp" contenteditable="true" data-f="end" spellcheck="false">${fmtT(c.end,true)}</span>
+        <button class="nudge" data-n="end,0.2" title="end +0.2s">+</button>
+      </div>
+      <textarea rows="1" spellcheck="false">${esc(c.text)}</textarea>
+      ${warn?`<div class="warn">${warn}</div>`:""}
+    </div>
+    <div class="ops">
+      <button data-op="play" title="Play this caption">▶</button>
+      <button data-op="edit" title="Edit this caption">✎</button>
+      <button data-op="split" title="Split at cursor">✂</button>
+      <button data-op="merge" title="Merge with next">⤵</button>
+      <button data-op="del" class="del" title="Delete">🗑</button>
+    </div>`;
+  d.addEventListener("click",e=>{
+    if(e.target.closest("button")||e.target.closest("textarea")||e.target.isContentEditable)return;
+    seekTo(c.start,!video.paused);});
+  d.querySelectorAll("[data-op]").forEach(b=>b.onclick=()=>ops[b.dataset.op](i));
+  d.querySelectorAll("[data-n]").forEach(b=>b.onclick=()=>{
+    const [f,dl]=b.dataset.n.split(",");nudge(i,f,parseFloat(dl));});
+  const ta=d.querySelector("textarea");
+  ta.oninput=()=>{caps[i].text=ta.value;autosize(ta);markDirty();updateWarn(d,caps[i]);};
+  ta.onfocus=()=>{d.classList.add("editing");seekTo(caps[i].start,false);autosize(ta);};
+  ta.onblur=()=>d.classList.remove("editing");
+  d.querySelectorAll(".tstamp").forEach(t=>{
+    t.onclick=()=>{if(document.activeElement!==t)seekTo(caps[i][t.dataset.f]);};
+    t.onblur=()=>{const v=parseTs(t.textContent);
+      if(v!==null){caps[i][t.dataset.f]=v;markDirty();}
+      t.textContent=fmtT(caps[i][t.dataset.f],true);};
+    t.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();t.blur();}};});
+  return d;}
+
+function parseTs(str){str=str.trim().replace(",",".");
+  let m=str.match(/^(?:(\d+):)?(\d+):(\d+(?:\.\d+)?)$/);
+  if(m)return (m[1]?+m[1]*3600:0)+ +m[2]*60+parseFloat(m[3]);
+  m=str.match(/^(\d+(?:\.\d+)?)$/);return m?parseFloat(m[1]):null;}
+function autosize(ta){ta.style.height="auto";if(ta.scrollHeight>0)ta.style.height=ta.scrollHeight+"px";}
+function capWarn(c){const lines=c.text.split("\n"),w=[];
+  if(lines.some(l=>l.length>42))w.push("line > 42 chars");
+  if(lines.length>2)w.push("more than 2 lines");
+  if(c.end-c.start>7)w.push("on screen > 7s");
+  if(c.end-c.start<=0)w.push("end before start");
+  return w.join(" · ");}
+function updateWarn(el,c){let w=el.querySelector(".warn");const msg=capWarn(c);
+  if(msg){if(!w){w=document.createElement("div");w.className="warn";el.querySelector(".mid").appendChild(w);}
+    w.textContent=msg;}else if(w)w.remove();}
+
+function markDirty(){dirty=true;setSave("Saving…");
+  clearTimeout(saveTimer);saveTimer=setTimeout(async()=>{
+    saveLocal();
+    if(serverJob&&serverBase){
+      try{await fetch(`${serverBase}/api/job/${serverJob.id}/captions`,{method:"PUT",
+        headers:{"Content-Type":"application/json"},body:JSON.stringify(caps)});}catch(e){}}
+    dirty=false;setSave("Saved on this device ✓",true);},900);}
+function setSave(m,ok){const s=$("savestate");s.textContent=m;s.classList.toggle("saved",!!ok);}
+
+const ops={
+  play:i=>seekTo(caps[i].start),
+  edit:i=>{const el=$("caplist").children[i];if(!el)return;video.pause();
+    const ta=el.querySelector("textarea");
+    el.scrollIntoView({block:"center",behavior:"smooth"});
+    ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);autosize(ta);},
+  del:i=>{caps.splice(i,1);renderCaps();markDirty();},
+  merge:i=>{if(i>=caps.length-1){toast("Nothing below to merge with");return;}
+    caps[i].text=(caps[i].text+" "+caps[i+1].text).replace(/\s+/g," ").trim();
+    caps[i].end=caps[i+1].end;caps.splice(i+1,1);renderCaps();markDirty();},
+  split:i=>{const el=$("caplist").children[i],ta=el.querySelector("textarea");
+    let pos=ta.selectionStart;const text=caps[i].text;
+    if(!pos||pos>=text.length){pos=Math.floor(text.length/2);
+      const sp=text.indexOf(" ",pos);if(sp>0)pos=sp;}
+    const a=text.slice(0,pos).trim(),b=text.slice(pos).trim();
+    if(!a||!b){toast("Place the cursor where you want to split");return;}
+    const mid=caps[i].start+(caps[i].end-caps[i].start)*(a.length/text.length);
+    const nb={start:+mid.toFixed(3),end:caps[i].end,text:b};
+    caps[i].text=a;caps[i].end=nb.start;
+    caps.splice(i+1,0,nb);renderCaps();markDirty();}};
+
+function nudge(i,f,d){caps[i][f]=Math.max(0,+((caps[i][f]+d).toFixed(3)));
+  const el=$("caplist").children[i];
+  el.querySelector(`.tstamp[data-f=${f}]`).textContent=fmtT(caps[i][f],true);
+  updateWarn(el,caps[i]);markDirty();}
+
+$("replBtn").onclick=()=>{
+  const f=$("findBox").value,r=$("replBox").value;
+  if(!f){toast("Type something to find");return;}
+  let n=0;const rx=new RegExp(f.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"gi");
+  caps.forEach(c=>{c.text=c.text.replace(rx,()=>{n++;return r;});});
+  renderCaps();if(n)markDirty();
+  toast(n?`Replaced ${n} occurrence${n>1?"s":""}`:"No matches found");};
+
+/* video sync */
+function seekTo(t,play=true){if(video.classList.contains("hidden"))return;
+  video.currentTime=Math.max(0,t+0.01);if(play)video.play();}
+document.querySelectorAll("[data-skip]").forEach(b=>b.onclick=()=>video.currentTime+=+b.dataset.skip);
+$("playBtn").onclick=()=>video.paused?video.play():video.pause();
+video.onplay=()=>$("playBtn").textContent="⏸ Pause";
+video.onpause=()=>$("playBtn").textContent="▶ Play";
+$("followBtn").onclick=()=>{follow=!follow;$("followBtn").textContent="📍 Follow: "+(follow?"on":"off");};
+const rates=[1,1.25,1.5,2,0.75];let ri=0;
+$("rate").onclick=()=>{ri=(ri+1)%rates.length;video.playbackRate=rates[ri];$("rate").textContent=rates[ri]+"×";};
+
+video.addEventListener("timeupdate",()=>{
+  const t=video.currentTime;let idx=-1;
+  if(activeIdx>=0&&activeIdx<caps.length&&t>=caps[activeIdx].start&&t<caps[activeIdx].end)idx=activeIdx;
+  else{let lo=0,hi=caps.length-1;
+    while(lo<=hi){const m=(lo+hi)>>1;
+      if(t<caps[m].start)hi=m-1;else if(t>=caps[m].end)lo=m+1;else{idx=m;break;}}}
+  if(idx!==activeIdx){
+    const list=$("caplist");
+    if(activeIdx>=0&&list.children[activeIdx])list.children[activeIdx].classList.remove("active");
+    activeIdx=idx;const nc=$("nowcap");
+    if(idx>=0){const el=list.children[idx];el.classList.add("active");
+      nc.textContent=caps[idx].text;nc.classList.remove("empty");
+      if(follow&&document.activeElement.tagName!=="TEXTAREA")
+        el.scrollIntoView({block:"center",behavior:"smooth"});}
+    else{nc.textContent="…";nc.classList.add("empty");}}});
+
+document.addEventListener("keydown",e=>{
+  if($("editor").classList.contains("hidden"))return;
+  const tag=document.activeElement.tagName;
+  if(e.key==="Escape")document.activeElement.blur();
+  if(tag==="TEXTAREA"||tag==="INPUT"||document.activeElement.isContentEditable)return;
+  if(e.code==="Space"){e.preventDefault();$("playBtn").onclick();}
+  if(e.key==="ArrowLeft")video.currentTime-=5;
+  if(e.key==="ArrowRight")video.currentTime+=5;});
+
+/* export */
+document.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>{
+  const name=(file?file.name.replace(/\.[^.]+$/,""):"captions");
+  const dur=caps.length?caps[caps.length-1].end:0;
+  const fmt=b.dataset.x;
+  if(fmt==="srt")download(toSrt(caps),name+".srt");
+  if(fmt==="vtt")download(toVtt(caps),name+".vtt");
+  if(fmt==="txt")download(toTxt(caps),name+"_transcript.txt");
+  if(fmt==="youtube")download(ytDetails(caps,dur,name),name+"_youtube_details.txt");
+  toast(fmt==="srt"?"SRT downloaded — YouTube Studio → Subtitles → Upload file → With timing":"Downloaded");});
+
+/* back */
+$("backBtn").onclick=()=>{
+  cancelled=true;if(worker){worker.terminate();worker=null;}
+  video.pause();serverJob=null;
+  show("home");};
+</script>
+</body>
+</html>
