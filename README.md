@@ -3,7 +3,9 @@
 Free, private, YouTube-ready captions for any video — right in your browser.
 Built for long-form podcast content in **English and Hinglish** (Hindi in Roman script).
 
-**Try it:** open the GitHub Pages link for this repo.
+**Try it:** https://kartikey-cloud.github.io/caption-wala/
+
+**New here? Read the [Complete User Guide](USER_GUIDE.md)** — setup, every feature, Mac vs Windows notes, server mode, YouTube upload steps, and troubleshooting.
 
 ## How it works (hybrid design)
 
